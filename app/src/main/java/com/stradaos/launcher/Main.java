@@ -100,6 +100,7 @@ public class Main extends Activity {
     private FrameLayout drawer;
     private float s = 1f;
     private int builtW, builtH;
+    private boolean portraitLayout;
 
     private TextView weatherTv, weatherCityTv;
     private ImageView weatherIc;
@@ -354,21 +355,28 @@ public class Main extends Activity {
     // ───────────────────────── construcción de la UI ─────────────────────────
 
     private void build(int W, int H) {
-        s = Math.min(W / 1024f, H / 600f);
+        portraitLayout = H > W;
+        s = portraitLayout ? Math.min(W / 600f, H / 1024f) : Math.min(W / 1024f, H / 600f);
         root.removeAllViews();
         root.setBackgroundColor(BG);
         getWindow().setBackgroundDrawable(new ColorDrawable(BG));
         board = new FrameLayout(this);
-        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams((int) (1024 * s), (int) (600 * s));
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams((int) ((portraitLayout ? 600 : 1024) * s), (int) ((portraitLayout ? 1024 : 600) * s));
         blp.gravity = Gravity.CENTER;
         root.addView(board, blp);
 
-        // franja del dock a todo el ancho (aunque la pantalla no sea 1024x600)
+        // En vertical, el dock se convierte en una columna lateral; en horizontal conserva la franja inferior.
         View dockBg = new View(this);
         dockBg.setBackgroundColor(DOCK);
-        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                (int) (H - ((H - 600 * s) / 2 + 456 * s)) + 1);
-        dlp.gravity = Gravity.BOTTOM;
+        FrameLayout.LayoutParams dlp;
+        if (portraitLayout) {
+            dlp = new FrameLayout.LayoutParams(Math.max(1, (int) (128 * s)), ViewGroup.LayoutParams.MATCH_PARENT);
+            dlp.gravity = Gravity.RIGHT;
+        } else {
+            dlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    (int) (H - ((H - 600 * s) / 2 + 456 * s)) + 1);
+            dlp.gravity = Gravity.BOTTOM;
+        }
         root.addView(dockBg, 0, dlp);
 
         buildTop();
@@ -725,18 +733,24 @@ public class Main extends Activity {
     }
 
     private void place(ViewGroup parent, View v, float x, float y, float w, float hh) {
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (w * s), (int) (hh * s));
+        // Transposición del lienzo 1024x600 a 600x1024: conserva el texto derecho
+        // y reordena las tarjetas en columna para la pantalla vertical.
+        float px = portraitLayout ? y : x;
+        float py = portraitLayout ? x : y;
+        float pw = portraitLayout ? hh : w;
+        float ph = portraitLayout ? w : hh;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (pw * s), (int) (ph * s));
         lp.gravity = Gravity.TOP | Gravity.LEFT;
-        lp.leftMargin = (int) (x * s);
-        lp.topMargin = (int) (y * s);
+        lp.leftMargin = (int) (px * s);
+        lp.topMargin = (int) (py * s);
         parent.addView(v, lp);
     }
 
     private void placeWrap(ViewGroup parent, View v, float x, float y) {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2);
         lp.gravity = Gravity.TOP | Gravity.LEFT;
-        lp.leftMargin = (int) (x * s);
-        lp.topMargin = (int) (y * s);
+        lp.leftMargin = (int) ((portraitLayout ? y : x) * s);
+        lp.topMargin = (int) ((portraitLayout ? x : y) * s);
         parent.addView(v, lp);
     }
 
