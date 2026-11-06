@@ -356,12 +356,12 @@ public class Main extends Activity {
 
     private void build(int W, int H) {
         portraitLayout = H > W;
-        s = portraitLayout ? Math.min(W / 600f, H / 1024f) : Math.min(W / 1024f, H / 600f);
+        s = portraitLayout ? Math.min(W / 768f, H / 1024f) : Math.min(W / 1024f, H / 600f);
         root.removeAllViews();
         root.setBackgroundColor(BG);
         getWindow().setBackgroundDrawable(new ColorDrawable(BG));
         board = new FrameLayout(this);
-        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams((int) ((portraitLayout ? 600 : 1024) * s), (int) ((portraitLayout ? 1024 : 600) * s));
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams((int) ((portraitLayout ? 768 : 1024) * s), (int) ((portraitLayout ? 1024 : 600) * s));
         blp.gravity = Gravity.CENTER;
         root.addView(board, blp);
 
@@ -370,8 +370,8 @@ public class Main extends Activity {
         dockBg.setBackgroundColor(DOCK);
         FrameLayout.LayoutParams dlp;
         if (portraitLayout) {
-            dlp = new FrameLayout.LayoutParams(Math.max(1, (int) (128 * s)), ViewGroup.LayoutParams.MATCH_PARENT);
-            dlp.gravity = Gravity.RIGHT;
+            dlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, (int) (104 * s)));
+            dlp.gravity = Gravity.BOTTOM;
         } else {
             dlp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                     (int) (H - ((H - 600 * s) / 2 + 456 * s)) + 1);
@@ -379,11 +379,20 @@ public class Main extends Activity {
         }
         root.addView(dockBg, 0, dlp);
 
-        buildTop();
-        buildCarCard();
-        buildAaCard();
-        buildAudioCard();
-        buildDock();
+        if (portraitLayout) {
+            buildTopPortrait();
+            buildCarCardPortrait();
+            buildAaCardPortrait();
+            buildAudioCardPortrait();
+            buildWebCardPortrait();
+            buildDockPortrait();
+        } else {
+            buildTop();
+            buildCarCard();
+            buildAaCard();
+            buildAudioCard();
+            buildDock();
+        }
 
         drawer = null;
         settingsView = null;
@@ -391,6 +400,221 @@ public class Main extends Activity {
         refreshStates();
         showWeather();
         if (settingsCat >= 0) showSettings(settingsCat);
+    }
+
+    // ── composición específica para pantalla vertical 768x1024 ──
+
+    private void buildTopPortrait() {
+        timeTv = tv("", 30, TEXT, true);
+        dateTv = tv("", 13, MUTED, false);
+        placeWrap(board, timeTv, 20, 14);
+        placeWrap(board, dateTv, 22, 52);
+        greetTv = tv("", 14, SOFT, false);
+        greetTv.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        place(board, greetTv, 420, 20, 270, 28);
+        weatherBox = new LinearLayout(this);
+        weatherBox.setGravity(Gravity.CENTER_VERTICAL);
+        weatherIc = icon("cloud", 18);
+        weatherBox.addView(weatherIc, new LinearLayout.LayoutParams((int)(18*s),(int)(18*s)));
+        weatherTv = tv("", 13, TEXT, true);
+        weatherTv.setPadding((int)(5*s),0,0,0);
+        weatherBox.addView(weatherTv);
+        weatherCityTv = tv("", 11, MUTED, false);
+        weatherCityTv.setPadding((int)(5*s),0,0,0);
+        weatherBox.addView(weatherCityTv);
+        weatherBox.setVisibility(View.GONE);
+        placeWrap(board, weatherBox, 430, 52);
+        View gear = circleIcon("settings", 42, 22, CIRCLE);
+        place(board, gear, 710, 18, 42, 42);
+        gear.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openSettings(); } });
+        greetTv.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openSettings(); } });
+    }
+
+    private void buildCarCardPortrait() {
+        FrameLayout c = card(16, 88, 736, 218, CARD);
+        carTv = tv(prefs.getString("car_name", "Mi vehículo"), 20, TEXT, true);
+        placeWrap(c, carTv, 18, 14);
+        TextView chip = tv(prefs.getString("car_tag", ""), 11, Color.WHITE, true);
+        chipTv = chip;
+        chip.setPadding((int)(8*s),(int)(3*s),(int)(8*s),(int)(3*s));
+        chip.setBackground(round(RED,8));
+        chip.setVisibility(prefs.getString("car_tag","").trim().length()==0 ? View.GONE : View.VISIBLE);
+        placeWrap(c, chip, 18, 44);
+        Bitmap photo = CarPhoto.load(this);
+        if (photo != null) {
+            ImageView car = new ImageView(this);
+            car.setImageBitmap(photo);
+            car.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            place(c, car, 18, 70, 330, 130);
+            car.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { photoMenu(); return true; } });
+        } else {
+            LinearLayout ph = new LinearLayout(this);
+            ph.setOrientation(LinearLayout.VERTICAL);
+            ph.setGravity(Gravity.CENTER);
+            ph.setBackground(round(INNER,14));
+            ImageView ic = icon("directions_car",54);
+            ic.setAlpha(0.35f);
+            ph.addView(ic,new LinearLayout.LayoutParams((int)(54*s),(int)(54*s)));
+            TextView t = tv("Toca para poner la foto de tu vehículo",12,MUTED,false);
+            t.setPadding(0,(int)(5*s),0,0);
+            ph.addView(t);
+            place(c,ph,18,70,330,130);
+            ph.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { pickPhoto(); } });
+        }
+        FrameLayout box = new FrameLayout(this);
+        box.setBackground(round(INNER,16));
+        place(c,box,370,54,346,146);
+        LinearLayout lbl = new LinearLayout(this);
+        lbl.setGravity(Gravity.CENTER_VERTICAL);
+        lbl.addView(icon("speed",16),new LinearLayout.LayoutParams((int)(16*s),(int)(16*s)));
+        TextView vl = tv("Velocidad",13,MUTED,false);
+        vl.setPadding((int)(6*s),0,0,0);
+        lbl.addView(vl);
+        placeWrap(box,lbl,16,12);
+        LinearLayout gps = new LinearLayout(this);
+        gps.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        gpsDot = new View(this);
+        gpsDot.setBackground(round(MUTED,4));
+        gps.addView(gpsDot,new LinearLayout.LayoutParams((int)(8*s),(int)(8*s)));
+        gpsTv = tv("GPS",11,MUTED,false);
+        gpsTv.setPadding((int)(6*s),0,0,0);
+        gps.addView(gpsTv);
+        place(box,gps,180,12,150,18);
+        LinearLayout sv = new LinearLayout(this);
+        sv.setGravity(Gravity.CENTER_VERTICAL);
+        speedTv = tv("--",58,TEXT,true);
+        TextView kmh = tv("km/h",15,MUTED,false);
+        kmh.setPadding((int)(8*s),0,0,0);
+        sv.addView(speedTv); sv.addView(kmh);
+        placeWrap(box,sv,16,50);
+        setGps(false,0);
+    }
+
+    private void buildAaCardPortrait() {
+        FrameLayout c = new FrameLayout(this);
+        c.setBackground(round(CARD,20));
+        place(board,c,16,322,736,348);
+        c.addView(new MapView(this,s,20*s),new FrameLayout.LayoutParams(-1,-1));
+        liveMap = new LiveMapView(this,s,20*s);
+        c.addView(liveMap,new FrameLayout.LayoutParams(-1,-1));
+        liveMap.setVisibility(View.INVISIBLE);
+        liveMap.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { liveMap.cycleZoom(); } });
+        liveMap.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                new AlertDialog.Builder(Main.this,dlg()).setTitle("Diagnóstico del mapa").setMessage(liveMap.diag()).setPositiveButton("OK",null).show();
+                return true;
+            }
+        });
+        seedLastLocation();
+        LinearLayout tag = new LinearLayout(this);
+        tag.setGravity(Gravity.CENTER_VERTICAL);
+        tag.setBackground(round((CARD & 0x00FFFFFF) | 0xE0000000,12));
+        tag.setPadding((int)(12*s),(int)(7*s),(int)(12*s),(int)(7*s));
+        tag.addView(icon("my_location",16),new LinearLayout.LayoutParams((int)(16*s),(int)(16*s)));
+        mapTagTv = tv("Buscando GPS…",13,TEXT,true);
+        mapTagTv.setPadding((int)(8*s),0,0,0);
+        tag.addView(mapTagTv);
+        placeWrap(c,tag,16,16);
+        FrameLayout panel = new FrameLayout(this);
+        panel.setBackground(round((CARD & 0x00FFFFFF) | 0xEB000000,16));
+        place(c,panel,12,258,712,78);
+        View aa = projButton("navigation","Android Auto",RED,true);
+        aaBtnTv = (TextView)aa.getTag();
+        place(panel,aa,10,8,340,62);
+        View cp = projButton("phone_iphone","CarPlay",BTN,false);
+        cpSubTv = (TextView)cp.getTag();
+        place(panel,cp,362,8,340,62);
+        aaSubTv = aaBtnTv;
+        aa.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openAndroidAuto(); } });
+        aa.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { chooseConnection(null); return true; } });
+        cp.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openCarPlay(); } });
+        cp.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { pickFor("carplay","CarPlay"); return true; } });
+        updateMapTag();
+    }
+
+    private void buildAudioCardPortrait() {
+        FrameLayout c = card(16,686,480,220,CARD);
+        placeWrap(c,tv("AUDIO",11,MUTED,true),16,12);
+        sourceTv = tv("",11,RED,true);
+        sourceTv.setGravity(Gravity.RIGHT);
+        place(c,sourceTv,300,12,160,16);
+        playerArt = new PlayerArt(this,s,asset("ic/music_note.png"));
+        place(c,playerArt,18,42,112,112);
+        trackTv = tv("Nada sonando",17,TEXT,true);
+        place(c,trackTv,148,54,310,26);
+        artistTv = tv("Radio, Bluetooth o USB",13,MUTED,false);
+        place(c,artistTv,148,84,310,22);
+        timePosTv = tv("",12,MUTED,false);
+        place(c,timePosTv,148,110,310,18);
+        View prev = circleIcon("skip_previous",48,24,BTN);
+        View play = circleIcon("play_arrow",56,28,RED);
+        playIc = (ImageView)((FrameLayout)play).getChildAt(0);
+        View next = circleIcon("skip_next",48,24,BTN);
+        place(c,prev,170,154,48,48);
+        place(c,play,232,150,56,56);
+        place(c,next,302,154,48,48);
+        prev.setOnClickListener(mediaClick(KeyEvent.KEYCODE_MEDIA_PREVIOUS));
+        play.setOnClickListener(mediaClick(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
+        next.setOnClickListener(mediaClick(KeyEvent.KEYCODE_MEDIA_NEXT));
+        c.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { showPlayerDiag(); return true; } });
+        renderTrack();
+    }
+
+    private void buildWebCardPortrait() {
+        FrameLayout c = card(512,686,240,220,CARD);
+        FrameLayout ic = new FrameLayout(this);
+        ic.setBackground(round(RED_DARK,16));
+        ImageView g = icon("public",28);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int)(28*s),(int)(28*s));
+        lp.gravity = Gravity.CENTER;
+        ic.addView(g,lp);
+        place(c,ic,16,20,52,52);
+        placeWrap(c,tv("Navegador",17,TEXT,true),16,88);
+        place(c,tv("Internet desde la pantalla",11,MUTED,false),16,118,208,36);
+        TextView arrow = tv("›",26,RED,false);
+        placeWrap(c,arrow,204,166);
+        c.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { openBrowser(); } });
+        c.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { pickFor("web","Navegador"); return true; } });
+    }
+
+    private void buildDockPortrait() {
+        final String[] icons = {"radio","bluetooth","photo_camera","public","folder","settings","apps"};
+        final String[] names = {"Radio","Bluetooth","Cámara","Web","Archivos","Ajustes","Apps"};
+        for (int i=0;i<7;i++) {
+            final int idx=i;
+            LinearLayout b = new LinearLayout(this);
+            b.setOrientation(LinearLayout.VERTICAL);
+            b.setGravity(Gravity.CENTER_HORIZONTAL);
+            b.addView(circleIcon(icons[i],52,24,CIRCLE),new LinearLayout.LayoutParams((int)(52*s),(int)(52*s)));
+            TextView l = tv(names[i],10,SOFT,false);
+            l.setGravity(Gravity.CENTER_HORIZONTAL);
+            l.setPadding(0,(int)(4*s),0,0);
+            b.addView(l,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+            place(board,b,10+106*i,930,96,82);
+            b.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    switch(idx) {
+                        case 0: openSlot(0); break;
+                        case 1: openSlot(1); break;
+                        case 2: openSlot(2); break;
+                        case 3: openBrowser(); break;
+                        case 4: openSlot(3); break;
+                        case 5: openSlot(4); break;
+                        default: openDrawer();
+                    }
+                }
+            });
+            b.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    int[] map={0,1,2,-1,3,4,-2};
+                    int m=map[idx];
+                    if(m==-1){pickFor("web","Navegador");return true;}
+                    if(m<0)return false;
+                    pickFor(SLOTS[m][0],SLOTS[m][1]);
+                    return true;
+                }
+            });
+        }
     }
 
     private void buildTop() {
@@ -733,24 +957,18 @@ public class Main extends Activity {
     }
 
     private void place(ViewGroup parent, View v, float x, float y, float w, float hh) {
-        // Transposición del lienzo 1024x600 a 600x1024: conserva el texto derecho
-        // y reordena las tarjetas en columna para la pantalla vertical.
-        float px = portraitLayout ? y : x;
-        float py = portraitLayout ? x : y;
-        float pw = portraitLayout ? hh : w;
-        float ph = portraitLayout ? w : hh;
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (pw * s), (int) (ph * s));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams((int) (w * s), (int) (hh * s));
         lp.gravity = Gravity.TOP | Gravity.LEFT;
-        lp.leftMargin = (int) (px * s);
-        lp.topMargin = (int) (py * s);
+        lp.leftMargin = (int) (x * s);
+        lp.topMargin = (int) (y * s);
         parent.addView(v, lp);
     }
 
     private void placeWrap(ViewGroup parent, View v, float x, float y) {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2);
         lp.gravity = Gravity.TOP | Gravity.LEFT;
-        lp.leftMargin = (int) ((portraitLayout ? y : x) * s);
-        lp.topMargin = (int) ((portraitLayout ? x : y) * s);
+        lp.leftMargin = (int) (x * s);
+        lp.topMargin = (int) (y * s);
         parent.addView(v, lp);
     }
 
