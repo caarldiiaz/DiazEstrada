@@ -2,7 +2,7 @@ name: Compilar (debug)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, 'feature/**' ]
     paths-ignore: [ '**.md', 'docs/**', 'fastlane/**', 'changelogs/**', 'update.json', '.github/ISSUE_TEMPLATE/**', '.github/FUNDING.yml' ]
   pull_request:
   workflow_dispatch:
