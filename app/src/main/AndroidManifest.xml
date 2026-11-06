@@ -19,7 +19,7 @@
         android:usesCleartextTraffic="true">
         <activity android:name="com.stradaos.launcher.Main" android:label="StradaOS"
             android:launchMode="singleTask" android:stateNotNeeded="true" android:clearTaskOnLaunch="true"
-            android:excludeFromRecents="true" android:screenOrientation="unspecified"
+            android:excludeFromRecents="true" android:screenOrientation="portrait"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>
